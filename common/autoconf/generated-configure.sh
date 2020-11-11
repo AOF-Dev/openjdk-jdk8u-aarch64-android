@@ -13725,6 +13725,11 @@ $as_echo "$OPENJDK_BUILD_OS-$OPENJDK_BUILD_CPU" >&6; }
       VAR_OS_API=posix
       VAR_OS_ENV=solaris
       ;;
+    *android*)
+      VAR_OS=linux
+      VAR_OS_API=posix
+      VAR_OS_ENV=linux
+      ;;
     *darwin*)
       VAR_OS=macosx
       VAR_OS_API=posix
@@ -47458,6 +47463,8 @@ $as_echo "$as_me: The path of FREETYPE_INCLUDE_PATH, which resolves as \"$path\"
         FREETYPE_CFLAGS="-I$FREETYPE_INCLUDE_PATH"
       fi
     fi
+    
+    FREETYPE_CFLAGS="$FREETYPE_CFLAGS -fuse-ld=gold"
 
     if test "x$FREETYPE_LIBS" = x; then
 
