@@ -95,7 +95,9 @@
 # include <string.h>
 # include <syscall.h>
 # include <sys/sysinfo.h>
+#ifndef __ANDROID__
 # include <gnu/libc-version.h>
+#endif
 # include <sys/ipc.h>
 # include <sys/shm.h>
 # include <link.h>
@@ -578,6 +580,50 @@ void os::Linux::hotspot_sigmask(Thread* thread) {
 }
 
 //////////////////////////////////////////////////////////////////////////////
+// Copy from glibc 2.31
+
+# ifndef _CS_GNU_LIBC_VERSION
+# define _CS_GNU_LIBC_VERSION 2
+# endif
+# ifndef _CS_GNU_LIBPTHREAD_VERSION
+# define _CS_GNU_LIBPTHREAD_VERSION 3
+# endif
+
+static size_t confstr(int name, char *buf, size_t len) {
+  const char *string = "";
+  size_t string_len = 1;
+  
+  switch (name) {
+    case _CS_GNU_LIBC_VERSION:
+      string = "bionic libc android-21";
+      string_len = sizeof("bionic libc android-21");
+      break;
+
+    case _CS_GNU_LIBPTHREAD_VERSION:
+      string = "bionic libc android-21 NPTL";
+      string_len = sizeof("bionic libc android-21 NPTL");
+      break;
+    default:
+      return 0;
+  }
+  
+  if (len > 0 && buf != NULL) {
+    if (string_len <= len) {
+      memcpy (buf, string, string_len);
+    } else {
+      memcpy (buf, string, len - 1);
+      buf[len - 1] = '\0';
+    }
+  }
+  return string_len;
+}
+
+const char* gnu_get_libc_version() {
+  return "0";
+}
+const char* gnu_get_libc_release() {
+  return "0";
+}
 // detecting pthread library
 
 void os::Linux::libpthread_init() {
@@ -2978,17 +3024,25 @@ extern "C" JNIEXPORT int fork1() { return fork(); }
 // Handle request to load libnuma symbol version 1.1 (API v1). If it fails
 // load symbol from base version instead.
 void* os::Linux::libnuma_dlsym(void* handle, const char *name) {
+#ifndef __ANDROID__
   void *f = dlvsym(handle, name, "libnuma_1.1");
   if (f == NULL) {
     f = dlsym(handle, name);
   }
   return f;
+#else
+  return dlsym(handle, name);
+#endif
 }
 
 // Handle request to load libnuma symbol version 1.2 (API v2) only.
 // Return NULL if the symbol is not defined in this particular version.
 void* os::Linux::libnuma_v2_dlsym(void* handle, const char* name) {
+#ifndef __ANDROID__
   return dlvsym(handle, name, "libnuma_1.2");
+#else
+  return NULL;
+#endif
 }
 
 bool os::Linux::libnuma_init() {
@@ -3628,6 +3682,9 @@ void os::large_page_init() {
 #define SHM_HUGETLB 04000
 #endif
 
+// android not support shm
+#ifndef __ANDROID__
+
 #define shm_warning_format(format, ...)              \
   do {                                               \
     if (UseLargePages &&                             \
@@ -3719,8 +3776,12 @@ static char* shmat_large_pages(int shmid, size_t bytes, size_t alignment, char* 
     return shmat_at_address(shmid, NULL);
   }
 }
+#endif //__ANDROID__ : android not support shm
 
 char* os::Linux::reserve_memory_special_shm(size_t bytes, size_t alignment, char* req_addr, bool exec) {
+  char* addr = NULL;
+// android not support shm
+#ifndef __ANDROID__
   // "exec" is passed in but not used.  Creating the shared image for
   // the code cache doesn't have an SHM_X executable permission to check.
   assert(UseLargePages && UseSHM, "only for SHM large pages");
@@ -3754,14 +3815,16 @@ char* os::Linux::reserve_memory_special_shm(size_t bytes, size_t alignment, char
   }
 
   // Attach to the region.
-  char* addr = shmat_large_pages(shmid, bytes, alignment, req_addr);
+  addr = shmat_large_pages(shmid, bytes, alignment, req_addr);
 
   // Remove shmid. If shmat() is successful, the actual shared memory segment
   // will be deleted when it's detached by shmdt() or when the process
   // terminates. If shmat() is not successful this will remove the shared
   // segment immediately.
   shmctl(shmid, IPC_RMID, NULL);
-
+#else
+  assert(0, "SHM not supported on this platform");
+#endif //__ANDROID__ : android not support shm
   return addr;
 }
 
@@ -3907,6 +3970,9 @@ char* os::reserve_memory_special(size_t bytes, size_t alignment, char* req_addr,
 
   char* addr;
   if (UseSHM) {
+#ifdef __ANDROID__
+    assert(0, "UseSHM not supported on this platform");
+#endif // __ANDROID__ : android not support shm
     addr = os::Linux::reserve_memory_special_shm(bytes, alignment, req_addr, exec);
   } else {
     assert(UseHugeTLBFS, "must be");
@@ -3926,8 +3992,13 @@ char* os::reserve_memory_special(size_t bytes, size_t alignment, char* req_addr,
 }
 
 bool os::Linux::release_memory_special_shm(char* base, size_t bytes) {
+#ifndef __ANDROID__
   // detaching the SHM segment will also delete it, see reserve_memory_special_shm()
   return shmdt(base) == 0;
+#else
+  assert(0, "SHM not supported on this platform");
+  return false;
+#endif // __ANDROID__ : android not support shm
 }
 
 bool os::Linux::release_memory_special_huge_tlbfs(char* base, size_t bytes) {
@@ -3954,6 +4025,9 @@ bool os::Linux::release_memory_special_impl(char* base, size_t bytes) {
   bool res;
 
   if (UseSHM) {
+#ifdef __ANDROID__
+    assert(0, "UseSHM not supported on this platform");
+#endif //__ANDROID__ : android not support shm
     res = os::Linux::release_memory_special_shm(base, bytes);
   } else {
     assert(UseHugeTLBFS, "must be");
@@ -5886,7 +5960,11 @@ bool os::is_thread_cpu_time_supported() {
 // Linux doesn't yet have a (official) notion of processor sets,
 // so just return the system wide load average.
 int os::loadavg(double loadavg[], int nelem) {
+#ifndef __ANDROID__
   return ::getloadavg(loadavg, nelem);
+#else
+  return -1;
+#endif
 }
 
 void os::pause() {

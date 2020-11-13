@@ -66,9 +66,10 @@ endif
 
 # if $(AGENT_DIR) does not exist, we don't build SA
 # also, we don't build SA on Itanium or zero.
+# Also, we don't build SA on AArch64 for Android
 
 ifneq ($(wildcard $(AGENT_DIR)),)
-ifneq ($(filter-out ia64 zero,$(SRCARCH)),)
+ifneq ($(filter-out aarch64 ia64 zero,$(SRCARCH)),)
   BUILDLIBSAPROC = $(LIBSAPROC)
 endif
 endif
