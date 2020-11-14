@@ -35,12 +35,14 @@
 #include <dlfcn.h>
 #include <sys/time.h>
 
-#ifndef _ALLBSD_SOURCE
+#if !defined(_ALLBSD_SOURCE) && !defined(__ANDROID__)
 #include <values.h>
 #else
 #include <limits.h>
 #include <sys/param.h>
+#ifndef __ANDROID__
 #include <sys/sysctl.h>
+#endif
 #ifndef MAXINT
 #define MAXINT INT_MAX
 #endif
@@ -56,6 +58,9 @@
 #include <arpa/inet.h>
 #include <net/route.h>
 #include <sys/utsname.h>
+#ifdef __ANDROID__
+#include <linux/ipv6_route.h>
+#endif
 
 #ifndef IPV6_FLOWINFO_SEND
 #define IPV6_FLOWINFO_SEND      33
