@@ -34,6 +34,10 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef __ANDROID__
+extern int isspace(int);
+#endif
+
 #include "jni.h"
 #include "manifest_info.h"
 #include "JarFacade.h"

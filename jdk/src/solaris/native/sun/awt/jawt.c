@@ -33,7 +33,7 @@
  */
 JNIEXPORT jboolean JNICALL JAWT_GetAWT(JNIEnv* env, JAWT* awt)
 {
-#if defined(JAVASE_EMBEDDED) && defined(HEADLESS)
+#if defined(JAVASE_EMBEDDED) || defined(HEADLESS)
     /* there are no AWT libs available at all */
     return JNI_FALSE;
 #else

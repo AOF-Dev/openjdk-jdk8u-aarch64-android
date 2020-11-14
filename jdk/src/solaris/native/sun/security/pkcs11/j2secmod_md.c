@@ -33,6 +33,9 @@
 
 #include "j2secmod.h"
 
+extern void throwIOException(JNIEnv *env, const char *message);
+extern void throwNullPointerException(JNIEnv *env, const char *message);
+
 void *findFunction(JNIEnv *env, jlong jHandle, const char *functionName) {
     void *hModule = (void*)jlong_to_ptr(jHandle);
     void *fAddress = dlsym(hModule, functionName);
