@@ -63,7 +63,7 @@
 
 static jlong page_size = 0;
 
-#if defined(_ALLBSD_SOURCE) || defined(_AIX)
+#if defined(_ALLBSD_SOURCE) || defined(_AIX) || defined(__ANDROID__)
 #define MB      (1024UL * 1024UL)
 #else
 
