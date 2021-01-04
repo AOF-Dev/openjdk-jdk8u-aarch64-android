@@ -31,6 +31,14 @@
 jboolean
 GetApplicationHome(char *buf, jint bufsize)
 {
+#ifdef __ANDROID__
+    char* java_home_var = getenv("JAVA_HOME");
+    if (java_home_var != NULL){
+        JLI_Snprintf(buf, bufsize, "%s", java_home_var);
+        buf[bufsize-1] = '\0';
+        return JNI_TRUE;
+    }
+#endif
     const char *execname = GetExecName();
     if (execname != NULL) {
         JLI_Snprintf(buf, bufsize, "%s", execname);
